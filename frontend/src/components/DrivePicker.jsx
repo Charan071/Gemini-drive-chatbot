@@ -135,14 +135,14 @@ const DrivePicker = ({ onSyncComplete }) => {
     };
 
     return (
-        <div className="minimal-card rounded-2xl p-6 h-full flex flex-col bg-white/80 backdrop-blur-sm">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <Folder size={20} className="text-indigo-600" /> Files
+        <div className="h-full flex flex-col bg-transparent">
+            <div className="flex justify-between items-center mb-4 px-2">
+                <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <Folder size={16} /> Files
                 </h2>
                 {selectedItems.length > 0 && (
-                    <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-100 text-indigo-700 rounded-full animate-fade-in flex items-center gap-1">
-                        <Check size={12} /> {selectedItems.length} selected
+                    <span className="text-xs font-semibold px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full animate-fade-in flex items-center gap-1">
+                        <Check size={10} /> {selectedItems.length}
                     </span>
                 )}
             </div>
@@ -155,8 +155,8 @@ const DrivePicker = ({ onSyncComplete }) => {
                         <button
                             onClick={() => handleBreadcrumbClick(index)}
                             className={`whitespace-nowrap transition-colors px-2 py-1 rounded-md flex items-center gap-1 ${index === breadcrumbs.length - 1
-                                ? 'font-semibold text-indigo-600 bg-indigo-50'
-                                : 'hover:text-gray-900 hover:bg-gray-100'
+                                ? 'font-semibold text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-900/30'
+                                : 'hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800'
                                 }`}
                         >
                             {index === 0 && <HardDrive size={12} />}
@@ -187,16 +187,16 @@ const DrivePicker = ({ onSyncComplete }) => {
                             return (
                                 <li
                                     key={file.id}
-                                    className={`group p-3 rounded-xl flex items-center justify-between cursor-pointer transition-all border ${isSelected
-                                        ? 'bg-indigo-50 border-indigo-200 shadow-sm'
-                                        : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-100'
+                                    className={`group p-2 rounded-lg flex items-center justify-between cursor-pointer transition-all border ${isSelected
+                                        ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800'
+                                        : 'bg-transparent border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
                                         }`}
                                     onClick={() => toggleSelection(file)}
                                 >
                                     <div className="flex items-center gap-3 overflow-hidden flex-1">
-                                        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-all duration-200 shrink-0 ${isSelected
-                                            ? 'bg-indigo-600 border-indigo-600 text-white'
-                                            : 'border-gray-200 bg-gray-50 text-gray-400 group-hover:border-gray-300'
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0 ${isSelected
+                                            ? 'bg-indigo-600 text-white'
+                                            : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
                                             }`}>
                                             {isSelected ? (
                                                 <Check size={16} />
@@ -207,7 +207,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                                             )}
                                         </div>
 
-                                        <span className={`truncate text-sm font-medium ${isSelected ? 'text-indigo-900' : 'text-gray-700'}`}>
+                                        <span className={`truncate text-sm ${isSelected ? 'text-indigo-900 dark:text-indigo-300 font-medium' : 'text-gray-700 dark:text-gray-300'}`}>
                                             {file.name}
                                         </span>
                                     </div>
@@ -218,7 +218,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                                                 e.stopPropagation();
                                                 handleFolderClick(file);
                                             }}
-                                            className="opacity-0 group-hover:opacity-100 transition-all text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg ml-2"
+                                            className="opacity-0 group-hover:opacity-100 transition-all text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/50 dark:text-indigo-400 dark:hover:bg-indigo-900 px-3 py-1.5 rounded-lg ml-2"
                                         >
                                             Open
                                         </button>
@@ -231,11 +231,11 @@ const DrivePicker = ({ onSyncComplete }) => {
             </div>
 
             {/* Sync Status / Actions */}
-            <div className="pt-4 border-t border-gray-100">
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
                 {syncStatus === 'syncing' ? (
-                    <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100 animate-fade-in">
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-100 dark:border-indigo-800 animate-fade-in">
                         <div className="flex justify-between items-center mb-4">
-                            <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
                                 <RefreshCw size={12} className="animate-spin" /> Syncing...
                             </span>
                         </div>
@@ -272,15 +272,15 @@ const DrivePicker = ({ onSyncComplete }) => {
                                     <div key={idx} className="flex items-center gap-3 relative">
                                         {/* Line connector */}
                                         {idx < 3 && (
-                                            <div className={`absolute left-[5px] top-5 w-0.5 h-4 ${isCompleted ? 'bg-indigo-500' : 'bg-gray-200'}`}></div>
+                                            <div className={`absolute left-[5px] top-5 w-0.5 h-4 ${isCompleted ? 'bg-indigo-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
                                         )}
 
                                         {/* Dot / Indicator */}
                                         <div className={`w-3 h-3 rounded-full z-10 transition-all duration-300 ${isCompleted ? 'bg-indigo-600' :
-                                            isActive ? 'bg-indigo-500 ring-4 ring-indigo-200 animate-bounce' : 'bg-gray-300'
+                                                isActive ? 'bg-indigo-500 ring-4 ring-indigo-200 dark:ring-indigo-900 animate-bounce' : 'bg-gray-300 dark:bg-gray-600'
                                             }`}></div>
 
-                                        <span className={`text-xs transition-colors duration-300 ${isActive || isCompleted ? 'text-indigo-900 font-medium' : 'text-gray-400'
+                                        <span className={`text-xs transition-colors duration-300 ${isActive || isCompleted ? 'text-indigo-900 dark:text-indigo-300 font-medium' : 'text-gray-400 dark:text-gray-600'
                                             }`}>
                                             {step}
                                         </span>
@@ -289,7 +289,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                             })}
                         </div>
 
-                        <p className="text-[10px] text-indigo-600 mt-4 truncate font-mono bg-indigo-100/50 p-1.5 rounded">
+                        <p className="text-[10px] text-indigo-600 dark:text-indigo-400 mt-4 truncate font-mono bg-indigo-100/50 dark:bg-indigo-900/40 p-1.5 rounded">
                             {syncMessage}
                         </p>
                     </div>
@@ -298,7 +298,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                         <button
                             onClick={handleSync}
                             disabled={syncing || loading || selectedItems.length === 0}
-                            className="w-full btn-primary py-3 rounded-xl font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                            className="w-full btn-primary py-3 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2"
                         >
                             {syncStatus === 'success' ? (
                                 <><Check size={18} /> Sync Complete</>
@@ -307,7 +307,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                             )}
                         </button>
                         {error && (
-                            <div className="text-red-600 text-xs mt-3 text-center bg-red-50 p-3 rounded-xl border border-red-100 flex items-center justify-center gap-2">
+                            <div className="text-red-600 dark:text-red-400 text-xs mt-3 text-center bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30 flex items-center justify-center gap-2">
                                 <AlertCircle size={14} /> {error}
                             </div>
                         )}

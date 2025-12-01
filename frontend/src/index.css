@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    body {
+        @apply bg-slate-50 text-slate-900 font-sans antialiased overflow-x-hidden transition-colors duration-300;
+    }
+
+    .dark body {
+        @apply bg-dark-bg text-dark-text;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        @apply font-heading font-bold tracking-tight;
+    }
+}
+
 :root {
     /* Brand Colors - Indigo/Violet Theme */
     --primary: #6366f1;
@@ -23,22 +42,6 @@
     --border-hover: #cbd5e1;
 }
 
-body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased overflow-x-hidden;
-    background-color: var(--bg-app);
-    color: var(--text-main);
-}
-
-/* Typography Overrides */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    @apply font-heading tracking-tight;
-}
-
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
@@ -54,6 +57,10 @@ h6 {
     border-radius: 10px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+    background: #4d4d4f;
+}
+
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
@@ -66,11 +73,22 @@ h6 {
     border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
+.dark .glass-panel {
+    background: rgba(32, 33, 35, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .minimal-card {
     background: var(--bg-card);
     border: 1px solid var(--border-light);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
     transition: all 0.3s ease;
+}
+
+.dark .minimal-card {
+    background: #202123;
+    border-color: #4d4d4f;
+    box-shadow: none;
 }
 
 .minimal-card:hover {

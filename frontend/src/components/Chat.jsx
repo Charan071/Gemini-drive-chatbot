@@ -56,120 +56,110 @@ const Chat = () => {
     ];
 
     return (
-        <div className="minimal-card rounded-2xl flex flex-col h-full overflow-hidden bg-white/80 backdrop-blur-sm relative">
-            {/* Header */}
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white/50">
-                <div>
-                    <h2 className="text-lg font-bold text-gray-900">Assistant</h2>
-                    <p className="text-xs text-gray-500 font-medium">Ask questions about your documents</p>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                    <Sparkles size={16} />
-                </div>
-            </div>
-
+        <div className="flex flex-col h-full bg-white dark:bg-dark-bg">
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-transparent scrollbar-thin scrollbar-thumb-gray-200">
-                {messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-center space-y-6 animate-fade-in">
-                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-white rounded-2xl flex items-center justify-center shadow-sm border border-indigo-50 text-indigo-600">
-                            <Bot size={32} />
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
+                {messages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-8 opacity-0 animate-fade-in animate-delay-100">
+                        <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center shadow-sm text-indigo-600 dark:text-indigo-400">
+                            <Sparkles size={32} />
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-900">How can I help you?</h3>
-                            <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
-                                I've analyzed your files. Ask me anything or try a suggestion below.
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">How can I help you today?</h3>
+                            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                                I've analyzed your files. Ask me anything about them, or try one of these suggestions:
                             </p>
                         </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md">
-                            {suggestions.map((suggestion, idx) => (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl px-4">
+                            {suggestions.map((suggestion, index) => (
                                 <button
-                                    key={idx}
+                                    key={index}
                                     onClick={() => handleSend(suggestion)}
-                                    className="text-xs text-left p-3 rounded-xl bg-white border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all text-gray-600 hover:text-indigo-600"
+                                    className="p-4 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-sidebar border border-gray-200 dark:border-dark-border rounded-xl hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-dark-surface transition-all shadow-sm hover:shadow-md"
                                 >
                                     {suggestion}
                                 </button>
                             ))}
                         </div>
                     </div>
-                )}
-
-                {messages.map((msg, index) => (
-                    <div
-                        key={index}
-                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-                    >
-                        <div
-                            className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
-                                ? 'bg-indigo-600 text-white rounded-br-none'
-                                : msg.role === 'error'
-                                    ? 'bg-red-50 text-red-600 border border-red-100'
-                                    : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
-                                }`}
-                        >
-                            {msg.role === 'bot' ? (
-                                <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-indigo-600 prose-strong:text-gray-900">
-                                    <ReactMarkdown
-                                        components={{
-                                            code({ node, inline, className, children, ...props }) {
-                                                return !inline ? (
-                                                    <div className="bg-gray-900 text-gray-100 p-3 rounded-lg my-2 overflow-x-auto text-xs font-mono border border-gray-700">
-                                                        {children}
-                                                    </div>
-                                                ) : (
-                                                    <code className="bg-gray-100 text-indigo-600 px-1 py-0.5 rounded text-xs font-mono border border-gray-200" {...props}>
-                                                        {children}
-                                                    </code>
-                                                )
-                                            }
-                                        }}
-                                    >
-                                        {msg.content}
-                                    </ReactMarkdown>
+                ) : (
+                    <div className="max-w-3xl mx-auto space-y-6 pb-4">
+                        {messages.map((msg, index) => (
+                            <div
+                                key={index}
+                                className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-fade-in`}
+                            >
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${msg.role === 'user'
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'bg-green-600 text-white'
+                                    }`}>
+                                    {msg.role === 'user' ? <span className="text-xs font-bold">U</span> : <Bot size={18} />}
                                 </div>
-                            ) : (
-                                <div className="whitespace-pre-wrap">{msg.content}</div>
-                            )}
-                        </div>
-                    </div>
-                ))}
 
-                {loading && (
-                    <div className="flex justify-start animate-fade-in">
-                        <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-none border border-gray-100 flex items-center gap-1.5 shadow-sm">
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                        </div>
+                                <div className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                                    <div className={`px-5 py-3.5 rounded-2xl shadow-sm text-sm leading-relaxed ${msg.role === 'user'
+                                        ? 'bg-indigo-600 text-white rounded-tr-none'
+                                        : 'bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border text-gray-800 dark:text-gray-100 rounded-tl-none'
+                                        }`}>
+                                        {msg.role === 'user' ? (
+                                            msg.content
+                                        ) : (
+                                            <div className="prose prose-sm max-w-none prose-indigo dark:prose-invert">
+                                                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="text-[10px] text-gray-400 mt-1 px-1">
+                                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                        {loading && (
+                            <div className="flex gap-4 animate-fade-in">
+                                <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center shrink-0 text-white">
+                                    <Bot size={18} />
+                                </div>
+                                <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border px-5 py-4 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
+                                    <Loader2 size={16} className="animate-spin text-indigo-600 dark:text-indigo-400" />
+                                    <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Thinking...</span>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={messagesEndRef} />
                     </div>
                 )}
-                <div ref={messagesEndRef} />
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white/80 border-t border-gray-100 backdrop-blur-md">
-                <div className="flex gap-2 bg-white p-1.5 rounded-2xl border border-gray-200 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-50 transition-all shadow-sm">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                        placeholder="Type your question..."
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-gray-900 placeholder-gray-400 px-4 text-sm"
-                        disabled={loading}
-                    />
-                    <button
-                        onClick={() => handleSend()}
-                        disabled={loading || !input.trim()}
-                        className="bg-indigo-600 text-white p-2.5 rounded-xl hover:bg-indigo-700 disabled:bg-gray-200 disabled:cursor-not-allowed transition-all shadow-md shadow-indigo-200 flex items-center justify-center"
+            <div className="p-4 bg-white dark:bg-dark-bg border-t border-gray-100 dark:border-dark-border">
+                <div className="max-w-3xl mx-auto relative">
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSend();
+                        }}
+                        className="relative group"
                     >
-                        {loading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
-                    </button>
-                </div>
-                <div className="text-center mt-2">
-                    <p className="text-[10px] text-gray-400">AI can make mistakes. Please verify important information.</p>
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Send a message..."
+                            className="w-full pl-5 pr-12 py-4 bg-gray-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-sm"
+                            disabled={loading}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!input.trim() || loading}
+                            className="absolute right-2 top-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                        >
+                            <Send size={18} />
+                        </button>
+                    </form>
+                    <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-2">
+                        AI can make mistakes. Please verify important information.
+                    </p>
                 </div>
             </div>
         </div>

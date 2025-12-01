@@ -4,6 +4,7 @@ module.exports = {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    darkMode: 'class',
     theme: {
         extend: {
             fontFamily: {
@@ -12,9 +13,16 @@ module.exports = {
             },
             colors: {
                 primary: {
-                    DEFAULT: '#6366f1',
-                    hover: '#4f46e5',
-                    light: '#e0e7ff',
+                    DEFAULT: '#6366f1', // Indigo 500
+                    hover: '#4f46e5',   // Indigo 600
+                    light: '#e0e7ff',   // Indigo 100
+                },
+                dark: {
+                    bg: '#343541',      // ChatGPT Dark BG
+                    sidebar: '#202123', // ChatGPT Dark Sidebar
+                    surface: '#444654', // ChatGPT Message Bubble
+                    text: '#ececf1',    // ChatGPT Text
+                    border: '#4d4d4f',  // Dark Border
                 }
             }
         },
