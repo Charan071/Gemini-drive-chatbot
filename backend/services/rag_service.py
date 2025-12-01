@@ -9,8 +9,9 @@ import mimetypes
 
 load_dotenv()
 
-# Initialize Client
+# Initialize Client (Global)
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
 
 def upload_file_to_store(file_content, display_name, mime_type='application/pdf', store_name=None):
     """
@@ -45,6 +46,7 @@ def upload_file_to_store(file_content, display_name, mime_type='application/pdf'
 
     try:
         # 1. Create or Get Store
+        # client is global now
         if not store_name:
             file_search_store = client.file_search_stores.create(
                 config={'display_name': f'Drive_RAG_Store_{int(time.time())}'}
@@ -102,6 +104,7 @@ def create_chat_session(store_name):
     Creates a chat session with the File Search tool enabled for the given store.
     """
     # Create chat
+    # client is global now
     chat = client.chats.create(
         model="gemini-2.5-flash", 
         config=types.GenerateContentConfig(

@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Sparkles, Bot, User, Send, AlertCircle, Loader2 } from 'lucide-react';
+import remarkGfm from 'remark-gfm';
+import { Sparkles, Send, AlertCircle, Loader2 } from 'lucide-react';
 
-const Chat = () => {
+const Chat = ({ sessionId }) => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -29,6 +30,7 @@ const Chat = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'x-session-id': sessionId || ''
                 },
                 body: JSON.stringify({ message: userMessage.content }),
             });
@@ -61,7 +63,7 @@ const Chat = () => {
             <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
                 {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-8 opacity-0 animate-fade-in animate-delay-100">
-                        <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center shadow-sm text-indigo-600 dark:text-indigo-400">
+                        <div className="w-16 h-16 bg-primary-light dark:bg-primary/20 rounded-2xl flex items-center justify-center shadow-sm text-primary">
                             <Sparkles size={32} />
                         </div>
                         <div>
@@ -75,7 +77,7 @@ const Chat = () => {
                                 <button
                                     key={index}
                                     onClick={() => handleSend(suggestion)}
-                                    className="p-4 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-sidebar border border-gray-200 dark:border-dark-border rounded-xl hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-dark-surface transition-all shadow-sm hover:shadow-md"
+                                    className="p-4 text-left text-sm font-medium text-gray-300 bg-[#292727] border border-dark-border rounded-xl hover:border-primary/50 hover:bg-dark-sidebar transition-all shadow-sm hover:shadow-md"
                                 >
                                     {suggestion}
                                 </button>
@@ -87,43 +89,27 @@ const Chat = () => {
                         {messages.map((msg, index) => (
                             <div
                                 key={index}
-                                className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-fade-in`}
+                                className={`flex flex-col gap-1 animate-fade-in ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                             >
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${msg.role === 'user'
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'bg-green-600 text-white'
+                                <div className={`px-5 py-3.5 rounded-2xl shadow-sm text-sm leading-relaxed max-w-[85%] ${msg.role === 'user'
+                                    ? 'bg-primary text-white rounded-tr-sm'
+                                    : 'bg-transparent text-gray-100 pl-0'
                                     }`}>
-                                    {msg.role === 'user' ? <span className="text-xs font-bold">U</span> : <Bot size={18} />}
-                                </div>
-
-                                <div className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                    <div className={`px-5 py-3.5 rounded-2xl shadow-sm text-sm leading-relaxed ${msg.role === 'user'
-                                        ? 'bg-indigo-600 text-white rounded-tr-none'
-                                        : 'bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border text-gray-800 dark:text-gray-100 rounded-tl-none'
-                                        }`}>
-                                        {msg.role === 'user' ? (
-                                            msg.content
-                                        ) : (
-                                            <div className="prose prose-sm max-w-none prose-indigo dark:prose-invert">
-                                                <ReactMarkdown>{msg.content}</ReactMarkdown>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <span className="text-[10px] text-gray-400 mt-1 px-1">
-                                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
+                                    {msg.role === 'user' ? (
+                                        msg.content
+                                    ) : (
+                                        <div className="prose prose-sm max-w-none prose-invert prose-p:leading-relaxed prose-pre:bg-[#292727] prose-pre:border prose-pre:border-gray-700">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
                         {loading && (
-                            <div className="flex gap-4 animate-fade-in">
-                                <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center shrink-0 text-white">
-                                    <Bot size={18} />
-                                </div>
-                                <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border px-5 py-4 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
-                                    <Loader2 size={16} className="animate-spin text-indigo-600 dark:text-indigo-400" />
-                                    <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Thinking...</span>
-                                </div>
+                            <div className="flex items-center gap-2 animate-fade-in pl-1 mt-2">
+                                <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                                <div className="w-2 h-2 bg-primary rounded-full animate-bounce animate-delay-100"></div>
+                                <div className="w-2 h-2 bg-primary rounded-full animate-bounce animate-delay-200"></div>
                             </div>
                         )}
                         <div ref={messagesEndRef} />
@@ -132,7 +118,7 @@ const Chat = () => {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white dark:bg-dark-bg border-t border-gray-100 dark:border-dark-border">
+            <div className="p-4 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md border-t border-gray-200 dark:border-dark-border sticky bottom-0 z-10">
                 <div className="max-w-3xl mx-auto relative">
                     <form
                         onSubmit={(e) => {
@@ -146,13 +132,13 @@ const Chat = () => {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Send a message..."
-                            className="w-full pl-5 pr-12 py-4 bg-gray-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-sm"
+                            className="w-full pl-5 pr-12 py-4 bg-[#292727] border border-transparent focus:border-primary/30 rounded-full focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all text-white placeholder-gray-400 shadow-sm"
                             disabled={loading}
                         />
                         <button
                             type="submit"
                             disabled={!input.trim() || loading}
-                            className="absolute right-2 top-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-primary text-white rounded-full hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
                         >
                             <Send size={18} />
                         </button>

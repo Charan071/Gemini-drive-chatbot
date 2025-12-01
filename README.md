@@ -11,7 +11,9 @@ A powerful RAG (Retrieval Augmented Generation) chatbot that integrates with **G
 *   **RAG Powered**: Uses Gemini's **File Search** tool to index documents and retrieve relevant context.
 *   **Gemini 2.5 Flash**: Leverages the latest, fast, and accurate model from Google.
 *   **Real-time Progress**: Visual feedback during file scanning, downloading, and indexing.
-*   **Minimalist UI**: A clean, "classy yet minimal" interface built with React and Tailwind CSS.
+*   **Real-time Progress**: Visual feedback during file scanning, downloading, and indexing.
+*   **Modern Dark UI**: A premium, always-dark interface inspired by n8n, featuring a custom Red/Pink primary color (`#ea4b4b`) and deep grey backgrounds (`#292727`).
+*   **ChatGPT-Style Chat**: A clean, icon-free chat layout with a minimal "thinking" indicator and unified design.
 
 ## 🏗️ Architecture
 
@@ -73,9 +75,49 @@ See [architecture.txt](architecture.txt) for a text-based diagram.
 
 3.  Open `http://localhost:5173` in your browser.
 
+## 🚀 Deployment (Railway)
+
+This project is ready for single-container deployment on [Railway](https://railway.app/).
+
+1.  **Fork/Push** this repository to your GitHub.
+2.  **New Project on Railway**: Select "Deploy from GitHub repo".
+3.  **Variables**: Add the following Environment Variables in Railway:
+    *   `GOOGLE_CLIENT_ID`: Your OAuth Client ID.
+    *   `GOOGLE_CLIENT_SECRET`: Your OAuth Client Secret.
+    *   `REDIRECT_URI`: `https://<your-railway-app-url>/rest/oauth2-credential/callback`
+    *   `FRONTEND_URL`: `https://<your-railway-app-url>`
+    *   `PORT`: `8000`
+4.  **Google Cloud Console**:
+    *   Add your Railway URL (`https://<your-railway-app-url>`) to **Authorized JavaScript origins**.
+    *   Add the `REDIRECT_URI` to **Authorized redirect URIs**.
+
+## 🚀 Deployment (Render)
+
+You can also deploy on [Render](https://render.com/).
+
+1.  **New Web Service**: Connect your GitHub repository.
+2.  **Runtime**: Select **Docker**.
+3.  **Environment Variables**: Add the same variables as above:
+    *   `GOOGLE_CLIENT_ID`
+    *   `GOOGLE_CLIENT_SECRET`
+    *   `REDIRECT_URI` (`https://<your-render-app-url>/rest/oauth2-credential/callback`)
+    *   `FRONTEND_URL` (`https://<your-render-app-url>`)
+    *   `PORT`: `8000`
+4.  **Deploy**: Render will build the Docker image and start the service.
+
 ## 🛡️ Security Note
 
-This project uses a local `client_secret.json` for demonstration. For production, ensure you secure your OAuth credentials and API keys properly.
+*   **OAuth**: Credentials are now loaded from Environment Variables for production security.
+*   **API Key**: Users can enter their own Gemini API Key in the frontend settings, which is stored locally in their browser.
+
+## 🔐 OAuth Verification (Important)
+
+When you deploy this app and try to log in with Google, you might see a "Google hasn't verified this app" warning. This is normal for personal projects.
+
+1.  **Click "Advanced"** on the warning screen.
+2.  **Click "Go to [Your App Name] (unsafe)"** to proceed.
+
+To remove this warning, you would need to submit your app for [Google Verification](https://support.google.com/cloud/answer/13463073), which is required for public-facing apps accessing sensitive scopes like Drive.
 
 ## 📄 License
 

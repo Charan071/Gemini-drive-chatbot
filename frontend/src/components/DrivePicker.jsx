@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Folder, FileText, Check, Loader2, RefreshCw, ChevronRight, AlertCircle, HardDrive } from 'lucide-react';
 
-const DrivePicker = ({ onSyncComplete }) => {
+const DrivePicker = ({ onSyncComplete, sessionId }) => {
     const [currentFolderId, setCurrentFolderId] = useState('root');
     const [breadcrumbs, setBreadcrumbs] = useState([{ id: 'root', name: 'My Drive' }]);
     const [files, setFiles] = useState([]);
@@ -21,7 +21,11 @@ const DrivePicker = ({ onSyncComplete }) => {
         setLoading(true);
         setError('');
         try {
-            const response = await fetch(`http://localhost:5678/api/drive/list?folder_id=${folderId}`);
+            const response = await fetch(`http://localhost:5678/api/drive/list?folder_id=${folderId}`, {
+                headers: {
+                    'x-session-id': sessionId || ''
+                }
+            });
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || 'Failed to fetch files');
             setFiles(data.files);
@@ -70,6 +74,8 @@ const DrivePicker = ({ onSyncComplete }) => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+
+                    'x-session-id': sessionId || '',
                 },
                 body: JSON.stringify({ items: selectedItems }),
             });
@@ -141,7 +147,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                     <Folder size={16} /> Files
                 </h2>
                 {selectedItems.length > 0 && (
-                    <span className="text-xs font-semibold px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full animate-fade-in flex items-center gap-1">
+                    <span className="text-xs font-semibold px-2 py-0.5 bg-primary-light dark:bg-primary/20 text-primary dark:text-primary-light rounded-full animate-fade-in flex items-center gap-1">
                         <Check size={10} /> {selectedItems.length}
                     </span>
                 )}
@@ -155,7 +161,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                         <button
                             onClick={() => handleBreadcrumbClick(index)}
                             className={`whitespace-nowrap transition-colors px-2 py-1 rounded-md flex items-center gap-1 ${index === breadcrumbs.length - 1
-                                ? 'font-semibold text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-900/30'
+                                ? 'font-semibold text-primary bg-primary-light dark:bg-primary/10'
                                 : 'hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800'
                                 }`}
                         >
@@ -170,7 +176,7 @@ const DrivePicker = ({ onSyncComplete }) => {
             <div className="flex-1 overflow-y-auto mb-6 pr-2 space-y-1 min-h-[300px]">
                 {loading ? (
                     <div className="flex flex-col justify-center items-center h-full text-gray-400 gap-3">
-                        <Loader2 size={24} className="animate-spin text-indigo-500" />
+                        <Loader2 size={24} className="animate-spin text-primary" />
                         <span className="text-xs font-medium">Loading files...</span>
                     </div>
                 ) : files.length === 0 ? (
@@ -188,14 +194,14 @@ const DrivePicker = ({ onSyncComplete }) => {
                                 <li
                                     key={file.id}
                                     className={`group p-2 rounded-lg flex items-center justify-between cursor-pointer transition-all border ${isSelected
-                                        ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800'
-                                        : 'bg-transparent border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
+                                        ? 'bg-primary-light dark:bg-primary/20 border-primary/20 dark:border-primary/30'
+                                        : 'bg-transparent border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'
                                         }`}
                                     onClick={() => toggleSelection(file)}
                                 >
                                     <div className="flex items-center gap-3 overflow-hidden flex-1">
                                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0 ${isSelected
-                                            ? 'bg-indigo-600 text-white'
+                                            ? 'text-primary'
                                             : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
                                             }`}>
                                             {isSelected ? (
@@ -207,7 +213,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                                             )}
                                         </div>
 
-                                        <span className={`truncate text-sm ${isSelected ? 'text-indigo-900 dark:text-indigo-300 font-medium' : 'text-gray-700 dark:text-gray-300'}`}>
+                                        <span className={`truncate text-sm ${isSelected ? 'text-primary font-medium' : 'text-gray-700 dark:text-gray-300'}`}>
                                             {file.name}
                                         </span>
                                     </div>
@@ -218,7 +224,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                                                 e.stopPropagation();
                                                 handleFolderClick(file);
                                             }}
-                                            className="opacity-0 group-hover:opacity-100 transition-all text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/50 dark:text-indigo-400 dark:hover:bg-indigo-900 px-3 py-1.5 rounded-lg ml-2"
+                                            className="opacity-0 group-hover:opacity-100 transition-all text-xs font-medium text-primary hover:text-primary-hover bg-primary-light hover:bg-primary/20 px-3 py-1.5 rounded-lg ml-2"
                                         >
                                             Open
                                         </button>
@@ -233,9 +239,9 @@ const DrivePicker = ({ onSyncComplete }) => {
             {/* Sync Status / Actions */}
             <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
                 {syncStatus === 'syncing' ? (
-                    <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-100 dark:border-indigo-800 animate-fade-in">
+                    <div className="bg-gray-50 dark:bg-dark-surface rounded-xl p-4 border border-gray-200 dark:border-dark-border animate-fade-in">
                         <div className="flex justify-between items-center mb-4">
-                            <span className="text-xs font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-primary flex items-center gap-1.5">
                                 <RefreshCw size={12} className="animate-spin" /> Syncing...
                             </span>
                         </div>
@@ -272,15 +278,15 @@ const DrivePicker = ({ onSyncComplete }) => {
                                     <div key={idx} className="flex items-center gap-3 relative">
                                         {/* Line connector */}
                                         {idx < 3 && (
-                                            <div className={`absolute left-[5px] top-5 w-0.5 h-4 ${isCompleted ? 'bg-indigo-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                                            <div className={`absolute left-[5px] top-5 w-0.5 h-4 ${isCompleted ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
                                         )}
 
                                         {/* Dot / Indicator */}
-                                        <div className={`w-3 h-3 rounded-full z-10 transition-all duration-300 ${isCompleted ? 'bg-indigo-600' :
-                                                isActive ? 'bg-indigo-500 ring-4 ring-indigo-200 dark:ring-indigo-900 animate-bounce' : 'bg-gray-300 dark:bg-gray-600'
+                                        <div className={`w-3 h-3 rounded-full z-10 transition-all duration-300 ${isCompleted ? 'bg-primary' :
+                                            isActive ? 'bg-primary ring-4 ring-primary-light dark:ring-primary/20 animate-bounce' : 'bg-gray-300 dark:bg-gray-600'
                                             }`}></div>
 
-                                        <span className={`text-xs transition-colors duration-300 ${isActive || isCompleted ? 'text-indigo-900 dark:text-indigo-300 font-medium' : 'text-gray-400 dark:text-gray-600'
+                                        <span className={`text-xs transition-colors duration-300 ${isActive || isCompleted ? 'text-primary font-medium' : 'text-gray-400 dark:text-gray-600'
                                             }`}>
                                             {step}
                                         </span>
@@ -289,7 +295,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                             })}
                         </div>
 
-                        <p className="text-[10px] text-indigo-600 dark:text-indigo-400 mt-4 truncate font-mono bg-indigo-100/50 dark:bg-indigo-900/40 p-1.5 rounded">
+                        <p className="text-[10px] text-primary mt-4 truncate font-mono bg-primary-light dark:bg-primary/10 p-1.5 rounded">
                             {syncMessage}
                         </p>
                     </div>
@@ -298,7 +304,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                         <button
                             onClick={handleSync}
                             disabled={syncing || loading || selectedItems.length === 0}
-                            className="w-full btn-primary py-3 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2"
+                            className="w-full btn-primary py-3 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20 dark:shadow-none flex items-center justify-center gap-2"
                         >
                             {syncStatus === 'success' ? (
                                 <><Check size={18} /> Sync Complete</>
