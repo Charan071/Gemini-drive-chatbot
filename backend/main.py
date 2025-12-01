@@ -148,12 +148,15 @@ async def sync_drive(request: SyncRequest):
             
             all_files_to_process = []
             
-            yield json.dumps({"status": "info", "message": "Scanning files..."}) + "\n"
+            def send_progress(msg, detail=None, status="progress"):
+                return json.dumps({"status": status, "message": msg, "detail": detail}) + "\n"
+
+            yield send_progress("Scanning files...", status="info")
             
             # 1. Collect all files (expand folders)
             for item in request.items:
                 if item.mimeType == 'application/vnd.google-apps.folder':
-                    yield json.dumps({"status": "info", "message": f"Scanning folder: {item.name}..."}) + "\n"
+                    yield send_progress(f"Scanning folder: {item.name}...", status="info")
                     # Recursive list
                     folder_files = list_files_in_folder(service, item.id)
                     all_files_to_process.extend(folder_files)
@@ -162,44 +165,62 @@ async def sync_drive(request: SyncRequest):
                     all_files_to_process.append(item.dict())
             
             if not all_files_to_process:
-                yield json.dumps({"status": "error", "message": "No files found to sync."}) + "\n"
+                yield send_progress("No files found to sync.", status="error")
                 return
                 
-            yield json.dumps({"status": "info", "message": f"Found {len(all_files_to_process)} files to process."}) + "\n"
+            yield send_progress(f"Found {len(all_files_to_process)} files to process.", status="info")
             
             uploaded_count = 0
             current_store_name = None 
             
             # 2. Download and Upload
             for i, file_meta in enumerate(all_files_to_process):
+                file_label = f"{i+1}/{len(all_files_to_process)}: {file_meta['name']}"
                 print(f"Processing: {file_meta['name']}")
-                yield json.dumps({"status": "progress", "message": f"Processing {i+1}/{len(all_files_to_process)}: {file_meta['name']}", "detail": "Downloading..."}) + "\n"
+                
+                # Stage 1: Downloading
+                yield send_progress(f"Processing {file_label}", detail="Downloading data")
                 
                 try:
                     content = download_file(service, file_meta['id'], file_meta['mimeType'])
                     
-                    yield json.dumps({"status": "progress", "message": f"Processing {i+1}/{len(all_files_to_process)}: {file_meta['name']}", "detail": "Uploading to Gemini..."}) + "\n"
-                    
-                    current_store_name = upload_file_to_store(
+                    # Determine correct mime type for upload
+                    upload_mime_type = file_meta['mimeType']
+                    if upload_mime_type.startswith('application/vnd.google-apps.'):
+                        upload_mime_type = 'application/pdf'
+
+                    # Stage 2 & 3: Sending and Indexing (Yielded from service)
+                    generator = upload_file_to_store(
                         file_content=content,
                         display_name=file_meta['name'],
-                        mime_type='application/pdf',
+                        mime_type=upload_mime_type,
                         store_name=current_store_name
                     )
+                    
+                    while True:
+                        try:
+                            msg = next(generator)
+                            # Map service messages to frontend detail
+                            yield send_progress(f"Processing {file_label}", detail=msg)
+                        except StopIteration as e:
+                            current_store_name = e.value
+                            break
+                    
                     uploaded_count += 1
-                    yield json.dumps({"status": "success", "message": f"Successfully processed: {file_meta['name']}"}) + "\n"
+                    yield send_progress(f"Successfully processed: {file_meta['name']}", status="success")
                     
                 except Exception as e:
                     print(f"Failed to process {file_meta['name']}: {e}")
-                    yield json.dumps({"status": "error", "message": f"Failed to process {file_meta['name']}: {str(e)}"}) + "\n"
+                    yield send_progress(f"Failed to process {file_meta['name']}: {str(e)}", status="error")
                 
             # 3. Create Chat Session
             if current_store_name:
-                yield json.dumps({"status": "info", "message": "Initializing Chat Session..."}) + "\n"
+                # Stage 4: Providing context
+                yield send_progress("Initializing Chat Session...", detail="Providing context to the LLM")
                 chat_session = create_chat_session(current_store_name)
                 yield json.dumps({"status": "complete", "message": f"Sync complete! {uploaded_count} files ready.", "files": [f['name'] for f in all_files_to_process]}) + "\n"
             else:
-                 yield json.dumps({"status": "error", "message": "Failed to sync any files."}) + "\n"
+                 yield send_progress("Failed to sync any files.", status="error")
             
         except Exception as e:
             print(f"Sync Error: {e}")
