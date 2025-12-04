@@ -1,323 +1,273 @@
-import React, { useState, useEffect } from 'react';
-import { Folder, FileText, Check, Loader2, RefreshCw, ChevronRight, AlertCircle, HardDrive } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL } from '../config';
 
-const DrivePicker = ({ onSyncComplete, sessionId }) => {
-    const [currentFolderId, setCurrentFolderId] = useState('root');
-    const [breadcrumbs, setBreadcrumbs] = useState([{ id: 'root', name: 'My Drive' }]);
+const DrivePicker = ({ onSyncComplete }) => {
     const [files, setFiles] = useState([]);
+    const [currentFolder, setCurrentFolder] = useState('root');
+    const [folderStack, setFolderStack] = useState([{ id: 'root', name: 'Drive' }]);
     const [loading, setLoading] = useState(false);
-    const [syncing, setSyncing] = useState(false);
-    const [error, setError] = useState('');
     const [selectedItems, setSelectedItems] = useState([]);
-    const [syncStatus, setSyncStatus] = useState(null); // 'idle', 'syncing', 'success', 'error'
-    const [syncMessage, setSyncMessage] = useState('');
+    const [syncStatus, setSyncStatus] = useState(null); // { status: 'info'|'success'|'error'|'complete', message: '', detail: '' }
+    const [syncing, setSyncing] = useState(false);
+    const scrollContainerRef = useRef(null);
 
     useEffect(() => {
-        fetchFiles(currentFolderId);
-        setSelectedItems([]);
-    }, [currentFolderId]);
+        fetchFiles(currentFolder);
+    }, [currentFolder]);
+
+    // Auto-scroll to bottom of logs
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+    }, [syncStatus]);
 
     const fetchFiles = async (folderId) => {
         setLoading(true);
-        setError('');
         try {
-            const response = await fetch(`http://localhost:5678/api/drive/list?folder_id=${folderId}`, {
-                headers: {
-                    'x-session-id': sessionId || ''
-                }
+            const sessionId = localStorage.getItem('session_id');
+            const response = await fetch(`${API_BASE_URL}/api/drive/list?folder_id=${folderId}`, {
+                headers: { 'x-session-id': sessionId }
             });
+            if (!response.ok) throw new Error('Failed to fetch files');
             const data = await response.json();
-            if (!response.ok) throw new Error(data.detail || 'Failed to fetch files');
             setFiles(data.files);
-        } catch (err) {
-            setError(err.message);
+        } catch (error) {
+            console.error(error);
         } finally {
             setLoading(false);
         }
     };
 
     const handleFolderClick = (folder) => {
-        setCurrentFolderId(folder.id);
-        setBreadcrumbs([...breadcrumbs, { id: folder.id, name: folder.name }]);
+        setCurrentFolder(folder.id);
+        setFolderStack([...folderStack, { id: folder.id, name: folder.name }]);
+        setSelectedItems([]); // Clear selection on navigation
     };
 
     const handleBreadcrumbClick = (index) => {
-        const newBreadcrumbs = breadcrumbs.slice(0, index + 1);
-        setBreadcrumbs(newBreadcrumbs);
-        setCurrentFolderId(newBreadcrumbs[newBreadcrumbs.length - 1].id);
+        const newStack = folderStack.slice(0, index + 1);
+        setFolderStack(newStack);
+        setCurrentFolder(newStack[newStack.length - 1].id);
+        setSelectedItems([]);
     };
 
-    const toggleSelection = (file) => {
-        setSelectedItems(prev => {
-            const exists = prev.find(item => item.id === file.id);
-            if (exists) {
-                return prev.filter(item => item.id !== file.id);
-            } else {
-                return [...prev, { id: file.id, name: file.name, mimeType: file.mimeType }];
-            }
-        });
+    const toggleSelection = (item) => {
+        if (selectedItems.find(i => i.id === item.id)) {
+            setSelectedItems(selectedItems.filter(i => i.id !== item.id));
+        } else {
+            setSelectedItems([...selectedItems, item]);
+        }
     };
 
     const handleSync = async () => {
-        if (selectedItems.length === 0) {
-            setError('Please select at least one file or folder.');
-            return;
-        }
+        if (selectedItems.length === 0) return;
 
         setSyncing(true);
-        setSyncStatus('syncing');
-        setSyncMessage('Initializing sync...');
-        setError('');
+        setSyncStatus({ status: 'info', message: 'Starting sync...', detail: 'Initializing connection' });
 
         try {
-            const response = await fetch('http://localhost:5678/api/sync', {
+            const sessionId = localStorage.getItem('session_id');
+            const response = await fetch(`${API_BASE_URL}/api/sync`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-
-                    'x-session-id': sessionId || '',
+                    'x-session-id': sessionId
                 },
                 body: JSON.stringify({ items: selectedItems }),
             });
 
-            if (response.status === 401) {
-                window.location.reload();
-                return;
-            }
-
             if (!response.ok) {
-                throw new Error('Sync request failed');
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Sync failed');
             }
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let buffer = '';
 
             while (true) {
-                const { done, value } = await reader.read();
+                const { value, done } = await reader.read();
                 if (done) break;
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop();
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
 
                 for (const line of lines) {
-                    if (!line.trim()) continue;
-                    try {
-                        const data = JSON.parse(line);
-
-                        // Update status message based on the log
-                        if (data.status === 'progress' || data.status === 'info') {
-                            setSyncMessage(data.detail || data.message);
+                    if (line.trim()) {
+                        try {
+                            const update = JSON.parse(line);
+                            setSyncStatus(update);
+                            // Removed auto-redirect logic here
+                        } catch (e) {
+                            console.error("Error parsing stream:", e);
                         }
-
-                        if (data.status === 'complete') {
-                            setSyncStatus('success');
-                            setSyncMessage('Sync complete!');
-                            onSyncComplete();
-                        } else if (data.status === 'error') {
-                            setSyncStatus('error');
-                            setError(data.message);
-                        }
-                    } catch (e) {
-                        console.error("Error parsing JSON stream", e);
                     }
                 }
             }
-
-        } catch (err) {
-            setSyncStatus('error');
-            setError(err.message);
+        } catch (error) {
+            setSyncStatus({ status: 'error', message: 'Sync failed', detail: error.message });
         } finally {
-            setSyncing(false);
-            // Reset status after a delay if successful
-            if (syncStatus !== 'error') {
-                setTimeout(() => {
-                    setSyncStatus(null);
-                    setSyncMessage('');
-                }, 3000);
-            }
+            // Keep syncing=true to show success/error state
         }
     };
 
+    const resetSync = () => {
+        setSyncing(false);
+        setSyncStatus(null);
+    };
+
     return (
-        <div className="h-full flex flex-col bg-transparent">
-            <div className="flex justify-between items-center mb-4 px-2">
-                <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                    <Folder size={16} /> Files
-                </h2>
-                {selectedItems.length > 0 && (
-                    <span className="text-xs font-semibold px-2 py-0.5 bg-primary-light dark:bg-primary/20 text-primary dark:text-primary-light rounded-full animate-fade-in flex items-center gap-1">
-                        <Check size={10} /> {selectedItems.length}
+        <div className="h-full flex flex-col bg-bg-primary">
+            {/* Header / Breadcrumbs */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-bg-primary/80 backdrop-blur-md sticky top-0 z-10">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                    {folderStack.map((folder, index) => (
+                        <React.Fragment key={folder.id}>
+                            {index > 0 && <span className="text-text-secondary/50 mx-1">/</span>}
+                            <button
+                                onClick={() => handleBreadcrumbClick(index)}
+                                className={`text-sm font-medium whitespace-nowrap px-3 py-1.5 rounded-lg transition-all ${index === folderStack.length - 1
+                                    ? 'text-text-primary bg-white/5'
+                                    : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                                    }`}
+                            >
+                                {folder.name}
+                            </button>
+                        </React.Fragment>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-4 ml-4">
+                    <span className="text-sm text-text-secondary hidden sm:inline whitespace-nowrap">
+                        {selectedItems.length} {selectedItems.length === 1 ? 'item' : 'items'}
                     </span>
-                )}
-            </div>
-
-            {/* Breadcrumbs */}
-            <nav className="flex items-center gap-1 mb-4 text-xs text-gray-500 overflow-x-auto pb-2 scrollbar-hide">
-                {breadcrumbs.map((crumb, index) => (
-                    <React.Fragment key={crumb.id}>
-                        {index > 0 && <ChevronRight size={12} className="text-gray-300" />}
-                        <button
-                            onClick={() => handleBreadcrumbClick(index)}
-                            className={`whitespace-nowrap transition-colors px-2 py-1 rounded-md flex items-center gap-1 ${index === breadcrumbs.length - 1
-                                ? 'font-semibold text-primary bg-primary-light dark:bg-primary/10'
-                                : 'hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800'
-                                }`}
-                        >
-                            {index === 0 && <HardDrive size={12} />}
-                            {crumb.name}
-                        </button>
-                    </React.Fragment>
-                ))}
-            </nav>
-
-            {/* File List */}
-            <div className="flex-1 overflow-y-auto mb-6 pr-2 space-y-1 min-h-[300px]">
-                {loading ? (
-                    <div className="flex flex-col justify-center items-center h-full text-gray-400 gap-3">
-                        <Loader2 size={24} className="animate-spin text-primary" />
-                        <span className="text-xs font-medium">Loading files...</span>
-                    </div>
-                ) : files.length === 0 ? (
-                    <div className="flex flex-col justify-center items-center h-full text-gray-400 text-sm gap-2">
-                        <Folder size={32} className="opacity-20" />
-                        <p>No files found in this folder</p>
-                    </div>
-                ) : (
-                    <ul className="space-y-1.5">
-                        {files.map((file) => {
-                            const isSelected = selectedItems.some(item => item.id === file.id);
-                            const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
-
-                            return (
-                                <li
-                                    key={file.id}
-                                    className={`group p-2 rounded-lg flex items-center justify-between cursor-pointer transition-all border ${isSelected
-                                        ? 'bg-primary-light dark:bg-primary/20 border-primary/20 dark:border-primary/30'
-                                        : 'bg-transparent border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'
-                                        }`}
-                                    onClick={() => toggleSelection(file)}
-                                >
-                                    <div className="flex items-center gap-3 overflow-hidden flex-1">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0 ${isSelected
-                                            ? 'text-primary'
-                                            : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
-                                            }`}>
-                                            {isSelected ? (
-                                                <Check size={16} />
-                                            ) : isFolder ? (
-                                                <Folder size={16} />
-                                            ) : (
-                                                <FileText size={16} />
-                                            )}
-                                        </div>
-
-                                        <span className={`truncate text-sm ${isSelected ? 'text-primary font-medium' : 'text-gray-700 dark:text-gray-300'}`}>
-                                            {file.name}
-                                        </span>
-                                    </div>
-
-                                    {isFolder && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleFolderClick(file);
-                                            }}
-                                            className="opacity-0 group-hover:opacity-100 transition-all text-xs font-medium text-primary hover:text-primary-hover bg-primary-light hover:bg-primary/20 px-3 py-1.5 rounded-lg ml-2"
-                                        >
-                                            Open
-                                        </button>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
-                )}
-            </div>
-
-            {/* Sync Status / Actions */}
-            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
-                {syncStatus === 'syncing' ? (
-                    <div className="bg-gray-50 dark:bg-dark-surface rounded-xl p-4 border border-gray-200 dark:border-dark-border animate-fade-in">
-                        <div className="flex justify-between items-center mb-4">
-                            <span className="text-xs font-bold text-primary flex items-center gap-1.5">
-                                <RefreshCw size={12} className="animate-spin" /> Syncing...
+                    <button
+                        onClick={handleSync}
+                        disabled={selectedItems.length === 0 || syncing}
+                        className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${selectedItems.length > 0 && !syncing
+                            ? 'bg-accent text-white hover:bg-accent-hover shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 hover:scale-105'
+                            : 'bg-white/5 text-text-secondary/50 cursor-not-allowed'
+                            }`}
+                    >
+                        {syncing ? (
+                            <span className="flex items-center gap-2">
+                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Syncing...
                             </span>
-                        </div>
+                        ) : (
+                            'Sync Selected'
+                        )}
+                    </button>
+                </div>
+            </div>
 
-                        {/* Stepper UI */}
-                        <div className="space-y-3 pl-2">
-                            {[
-                                "Downloading data",
-                                "Sending file to File Search",
-                                "Indexing and chunking",
-                                "Providing context to the LLM"
-                            ].map((step, idx) => {
-                                // Determine active step based on syncMessage
-                                let isActive = false;
-                                let isCompleted = false;
-
-                                // Simple logic to map backend messages to steps
-                                if (syncMessage.includes("Downloading")) {
-                                    if (idx === 0) isActive = true;
-                                } else if (syncMessage.includes("Sending")) {
-                                    if (idx === 0) isCompleted = true;
-                                    if (idx === 1) isActive = true;
-                                } else if (syncMessage.includes("Indexing")) {
-                                    if (idx <= 1) isCompleted = true;
-                                    if (idx === 2) isActive = true;
-                                } else if (syncMessage.includes("Providing context")) {
-                                    if (idx <= 2) isCompleted = true;
-                                    if (idx === 3) isActive = true;
-                                } else if (syncMessage.includes("complete")) {
-                                    isCompleted = true;
-                                }
-
-                                return (
-                                    <div key={idx} className="flex items-center gap-3 relative">
-                                        {/* Line connector */}
-                                        {idx < 3 && (
-                                            <div className={`absolute left-[5px] top-5 w-0.5 h-4 ${isCompleted ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                                        )}
-
-                                        {/* Dot / Indicator */}
-                                        <div className={`w-3 h-3 rounded-full z-10 transition-all duration-300 ${isCompleted ? 'bg-primary' :
-                                            isActive ? 'bg-primary ring-4 ring-primary-light dark:ring-primary/20 animate-bounce' : 'bg-gray-300 dark:bg-gray-600'
-                                            }`}></div>
-
-                                        <span className={`text-xs transition-colors duration-300 ${isActive || isCompleted ? 'text-primary font-medium' : 'text-gray-400 dark:text-gray-600'
-                                            }`}>
-                                            {step}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        <p className="text-[10px] text-primary mt-4 truncate font-mono bg-primary-light dark:bg-primary/10 p-1.5 rounded">
-                            {syncMessage}
-                        </p>
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-0">
+                {syncing ? (
+                    <div className="h-full flex flex-col items-center justify-center fade-in">
+                        {syncStatus?.status === 'error' ? (
+                            <div className="text-center fade-in">
+                                <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-red-500">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-2xl font-semibold mb-3 text-red-500">Sync Failed</h3>
+                                <p className="text-text-secondary text-sm max-w-lg text-center leading-relaxed mb-8">{syncStatus?.detail}</p>
+                                <button
+                                    onClick={resetSync}
+                                    className="px-6 py-2 bg-bg-secondary hover:bg-white/10 rounded-xl text-text-primary transition-colors font-medium"
+                                >
+                                    Go Back
+                                </button>
+                            </div>
+                        ) : syncStatus?.status === 'complete' ? (
+                            <div className="text-center fade-in">
+                                <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-12 h-12 text-green-500">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-3xl font-bold mb-3 text-text-primary">Sync Complete!</h3>
+                                <p className="text-text-secondary text-base max-w-lg text-center leading-relaxed mb-8">
+                                    Successfully indexed {selectedItems.length} files. You can now chat with them.
+                                </p>
+                                <button
+                                    onClick={() => onSyncComplete(selectedItems.length)}
+                                    className="px-8 py-3 bg-accent text-white rounded-xl hover:bg-accent-hover shadow-lg shadow-accent/30 hover:shadow-xl hover:scale-105 transition-all font-semibold text-lg flex items-center gap-2 mx-auto"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                                    </svg>
+                                    Start Conversation
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="w-20 h-20 border-4 border-white/10 border-t-accent rounded-full animate-spin mb-8"></div>
+                                <h3 className="text-2xl font-semibold mb-3">{syncStatus?.message || 'Processing...'}</h3>
+                                <p className="text-text-secondary text-sm max-w-lg text-center leading-relaxed">{syncStatus?.detail}</p>
+                            </>
+                        )}
+                    </div>
+                ) : loading ? (
+                    <div className="h-full flex items-center justify-center">
+                        <div className="w-10 h-10 border-3 border-white/10 border-t-accent rounded-full animate-spin"></div>
                     </div>
                 ) : (
-                    <>
-                        <button
-                            onClick={handleSync}
-                            disabled={syncing || loading || selectedItems.length === 0}
-                            className="w-full btn-primary py-3 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20 dark:shadow-none flex items-center justify-center gap-2"
-                        >
-                            {syncStatus === 'success' ? (
-                                <><Check size={18} /> Sync Complete</>
-                            ) : (
-                                <><RefreshCw size={18} /> Sync Selected {selectedItems.length > 0 && `(${selectedItems.length})`}</>
-                            )}
-                        </button>
-                        {error && (
-                            <div className="text-red-600 dark:text-red-400 text-xs mt-3 text-center bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30 flex items-center justify-center gap-2">
-                                <AlertCircle size={14} /> {error}
+                    <div className="max-w-7xl mx-auto pb-20">
+                        {files.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                {files.map((file) => {
+                                    const isSelected = selectedItems.find(i => i.id === file.id);
+                                    const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+
+                                    return (
+                                        <div
+                                            key={file.id}
+                                            onClick={() => isFolder ? handleFolderClick(file) : toggleSelection(file)}
+                                            className={`group relative p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col items-center text-center gap-3
+                            ${isSelected
+                                                    ? 'bg-accent/10 border-accent shadow-lg shadow-accent/10 scale-[0.98]'
+                                                    : 'bg-bg-secondary/50 border-white/5 hover:bg-bg-secondary hover:border-white/10 hover:shadow-lg hover:scale-[1.02]'
+                                                }
+                          `}
+                                        >
+                                            {/* Selection Checkbox */}
+                                            {!isFolder && (
+                                                <div className={`absolute top-3 right-3 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected ? 'bg-accent border-accent opacity-100 scale-100' : 'border-white/30 opacity-0 group-hover:opacity-100 scale-90'}`}>
+                                                    {isSelected && (
+                                                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="w-14 h-14 flex items-center justify-center text-4xl transform group-hover:scale-110 transition-transform duration-200">
+                                                {isFolder ? '📁' : file.mimeType.includes('pdf') ? '📄' : '📝'}
+                                            </div>
+
+                                            <span className="text-sm font-medium text-text-primary line-clamp-2 break-words w-full px-1">
+                                                {file.name}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-32 text-text-secondary">
+                                <div className="w-24 h-24 bg-bg-secondary rounded-full flex items-center justify-center mb-6">
+                                    <span className="text-4xl">📂</span>
+                                </div>
+                                <h3 className="text-xl font-medium text-text-primary mb-2">This folder is empty</h3>
+                                <p className="text-sm">No files found in this location.</p>
                             </div>
                         )}
-                    </>
+                    </div>
                 )}
             </div>
         </div>

@@ -1,0 +1,16 @@
+{
+    "rewrites": [
+        {
+            "source": "/api/:path*",
+            "destination": "https://gemini-drive-backend.onrender.com/api/:path*"
+        },
+        {
+            "source": "/rest/:path*",
+            "destination": "https://gemini-drive-backend.onrender.com/rest/:path*"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}

@@ -9,3 +9,5 @@ google-genai
 python-dotenv
 requests
 pydantic
+motor
+certifi
