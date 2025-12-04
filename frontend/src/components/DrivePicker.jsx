@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config';
 
-const DrivePicker = ({ onSyncComplete }) => {
+const DrivePicker = ({ onSyncComplete, selectedFiles, setSelectedFiles, syncStatus, setSyncStatus }) => {
     const [files, setFiles] = useState([]);
     const [currentFolder, setCurrentFolder] = useState('root');
     const [folderStack, setFolderStack] = useState([{ id: 'root', name: 'Drive' }]);
     const [loading, setLoading] = useState(false);
-    const [selectedItems, setSelectedItems] = useState([]);
-    const [syncStatus, setSyncStatus] = useState(null); // { status: 'info'|'success'|'error'|'complete', message: '', detail: '' }
     const [syncing, setSyncing] = useState(false);
     const scrollContainerRef = useRef(null);
 
@@ -42,26 +40,26 @@ const DrivePicker = ({ onSyncComplete }) => {
     const handleFolderClick = (folder) => {
         setCurrentFolder(folder.id);
         setFolderStack([...folderStack, { id: folder.id, name: folder.name }]);
-        setSelectedItems([]); // Clear selection on navigation
+        // Don't clear selection on navigation anymore
     };
 
     const handleBreadcrumbClick = (index) => {
         const newStack = folderStack.slice(0, index + 1);
         setFolderStack(newStack);
         setCurrentFolder(newStack[newStack.length - 1].id);
-        setSelectedItems([]);
+        // Don't clear selection on navigation
     };
 
     const toggleSelection = (item) => {
-        if (selectedItems.find(i => i.id === item.id)) {
-            setSelectedItems(selectedItems.filter(i => i.id !== item.id));
+        if (selectedFiles.find(i => i.id === item.id)) {
+            setSelectedFiles(selectedFiles.filter(i => i.id !== item.id));
         } else {
-            setSelectedItems([...selectedItems, item]);
+            setSelectedFiles([...selectedFiles, item]);
         }
     };
 
     const handleSync = async () => {
-        if (selectedItems.length === 0) return;
+        if (selectedFiles.length === 0) return;
 
         setSyncing(true);
         setSyncStatus({ status: 'info', message: 'Starting sync...', detail: 'Initializing connection' });
@@ -74,7 +72,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                     'Content-Type': 'application/json',
                     'x-session-id': sessionId
                 },
-                body: JSON.stringify({ items: selectedItems }),
+                body: JSON.stringify({ items: selectedFiles }),
             });
 
             if (!response.ok) {
@@ -97,7 +95,6 @@ const DrivePicker = ({ onSyncComplete }) => {
                         try {
                             const update = JSON.parse(line);
                             setSyncStatus(update);
-                            // Removed auto-redirect logic here
                         } catch (e) {
                             console.error("Error parsing stream:", e);
                         }
@@ -138,13 +135,10 @@ const DrivePicker = ({ onSyncComplete }) => {
                 </div>
 
                 <div className="flex items-center gap-4 ml-4">
-                    <span className="text-sm text-text-secondary hidden sm:inline whitespace-nowrap">
-                        {selectedItems.length} {selectedItems.length === 1 ? 'item' : 'items'}
-                    </span>
                     <button
                         onClick={handleSync}
-                        disabled={selectedItems.length === 0 || syncing}
-                        className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${selectedItems.length > 0 && !syncing
+                        disabled={selectedFiles.length === 0 || syncing}
+                        className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${selectedFiles.length > 0 && !syncing
                             ? 'bg-accent text-white hover:bg-accent-hover shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 hover:scale-105'
                             : 'bg-white/5 text-text-secondary/50 cursor-not-allowed'
                             }`}
@@ -158,7 +152,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                                 Syncing...
                             </span>
                         ) : (
-                            'Sync Selected'
+                            `Sync ${selectedFiles.length > 0 ? `(${selectedFiles.length})` : ''}`
                         )}
                     </button>
                 </div>
@@ -193,10 +187,10 @@ const DrivePicker = ({ onSyncComplete }) => {
                                 </div>
                                 <h3 className="text-3xl font-bold mb-3 text-text-primary">Sync Complete!</h3>
                                 <p className="text-text-secondary text-base max-w-lg text-center leading-relaxed mb-8">
-                                    Successfully indexed {selectedItems.length} files. You can now chat with them.
+                                    Successfully indexed {selectedFiles.length} files. You can now chat with them.
                                 </p>
                                 <button
-                                    onClick={() => onSyncComplete(selectedItems.length)}
+                                    onClick={() => onSyncComplete(selectedFiles.length)}
                                     className="px-8 py-3 bg-accent text-white rounded-xl hover:bg-accent-hover shadow-lg shadow-accent/30 hover:shadow-xl hover:scale-105 transition-all font-semibold text-lg flex items-center gap-2 mx-auto"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
@@ -222,7 +216,7 @@ const DrivePicker = ({ onSyncComplete }) => {
                         {files.length > 0 ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                                 {files.map((file) => {
-                                    const isSelected = selectedItems.find(i => i.id === file.id);
+                                    const isSelected = selectedFiles.find(i => i.id === file.id);
                                     const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
 
                                     return (

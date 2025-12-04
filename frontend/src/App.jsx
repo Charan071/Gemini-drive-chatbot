@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import DrivePicker from './components/DrivePicker';
 import Chat from './components/Chat';
 import SettingsModal from './components/SettingsModal';
+import FileContextPanel from './components/FileContextPanel';
 import { API_BASE_URL } from './config';
 
 function App() {
@@ -11,6 +12,10 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [view, setView] = useState('picker');
   const [user, setUser] = useState({ email: 'User' });
+
+  // Lifted State for Files & Sync
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [syncStatus, setSyncStatus] = useState(null);
   const [syncedFileCount, setSyncedFileCount] = useState(0);
 
   // Settings State
@@ -64,16 +69,12 @@ function App() {
       if (data.user) {
         setUser(data.user);
       }
-
-      // If API key is set in backend, we might want to fetch it or just know it exists
-      // For now, we rely on isApiKeySet. If user wants to update, they can enter a new one.
     } catch (error) {
       console.error("Auth check failed", error);
     }
   };
 
   const handleLogin = async () => {
-    // Use crypto.randomUUID() for better security
     const sessionId = crypto.randomUUID();
     localStorage.setItem('session_id', sessionId);
 
@@ -96,6 +97,8 @@ function App() {
     setIsApiKeySet(false);
     setIsSettingsOpen(false);
     setView('picker');
+    setSelectedFiles([]);
+    setSyncStatus(null);
   };
 
   const handleSaveApiKey = async (newKey) => {
@@ -110,7 +113,7 @@ function App() {
         body: JSON.stringify({ api_key: newKey })
       });
       setIsApiKeySet(true);
-      setApiKey(newKey); // Update local state
+      setApiKey(newKey);
     } catch (error) {
       console.error("Failed to save API key", error);
     }
@@ -129,6 +132,16 @@ function App() {
       window.history.replaceState({}, document.title, "/");
     }
   }, []);
+
+  const handleRemoveFile = (fileToRemove) => {
+    setSelectedFiles(prev => prev.filter(f => f.id !== fileToRemove.id));
+    // Note: In a real implementation, this might trigger a re-sync or API call
+    // For now, it just updates the UI state.
+    if (view === 'chat') {
+      // If removing files while chatting, we might want to warn user or auto-switch to picker
+      // to re-sync.
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -165,17 +178,24 @@ function App() {
     );
   }
 
+  const handleNewChat = () => {
+    setView('picker');
+    setSelectedFiles([]);
+    setSyncStatus(null);
+    setSyncedFileCount(0);
+  };
+
   return (
     <div className="flex h-screen bg-bg-primary overflow-hidden transition-colors duration-300">
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        onNewChat={() => setView('picker')}
+        onNewChat={handleNewChat}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full relative">
+      <div className="flex-1 flex flex-col h-full relative min-w-0">
         {/* Mobile Header */}
         <div className="md:hidden p-4 border-b border-white/10 flex items-center justify-between bg-bg-primary/80 backdrop-blur-md z-40 sticky top-0">
           <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-text-secondary hover:text-text-primary">
@@ -184,7 +204,7 @@ function App() {
             </svg>
           </button>
           <span className="font-semibold text-text-primary">CIRA</span>
-          <div className="w-8"></div> {/* Spacer */}
+          <div className="w-8"></div>
         </div>
 
         {/* Overlay for mobile sidebar */}
@@ -195,16 +215,35 @@ function App() {
           ></div>
         )}
 
-        <main className="flex-1 overflow-hidden relative">
-          {view === 'picker' ? (
-            <DrivePicker onSyncComplete={handleSyncComplete} />
-          ) : (
-            <Chat syncedFileCount={syncedFileCount} />
-          )}
+        <main className="flex-1 overflow-hidden relative flex">
+          {/* Center Workspace */}
+          <div className="flex-1 flex flex-col min-w-0 relative">
+            {view === 'picker' ? (
+              <DrivePicker
+                onSyncComplete={handleSyncComplete}
+                selectedFiles={selectedFiles}
+                setSelectedFiles={setSelectedFiles}
+                syncStatus={syncStatus}
+                setSyncStatus={setSyncStatus}
+              />
+            ) : (
+              <Chat syncedFileCount={syncedFileCount} />
+            )}
+          </div>
+
+          {/* Right Panel - Persistent File Context */}
+          <div className="hidden lg:block h-full">
+            <FileContextPanel
+              files={selectedFiles}
+              onRemoveFile={handleRemoveFile}
+              onAddFiles={() => setView('picker')}
+              syncStatus={syncStatus}
+            />
+          </div>
         </main>
 
         <SettingsModal
-          isOpen={isSettingsOpen || (!isApiKeySet && isAuthenticated)} // Force open if API key not set
+          isOpen={isSettingsOpen || (!isApiKeySet && isAuthenticated)}
           onClose={() => setIsSettingsOpen(false)}
           apiKey={apiKey}
           onSaveApiKey={handleSaveApiKey}

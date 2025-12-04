@@ -87,51 +87,35 @@ const Chat = ({ syncedFileCount = 0 }) => {
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-16">
-                <div className="max-w-4xl mx-auto space-y-8">
+                <div className="max-w-3xl mx-auto space-y-10">
                     {messages.map((msg, index) => (
                         <div
                             key={index}
-                            className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                         >
-                            {/* Avatar for Model */}
-                            {msg.role === 'model' && (
-                                <div className="w-9 h-9 rounded-lg bg-accent flex-shrink-0 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                                    C
-                                </div>
-                            )}
-
+                            {/* Message Content */}
                             <div
-                                className={`relative px-5 py-4 rounded-2xl max-w-[80%] md:max-w-[70%] text-[15px] leading-relaxed
+                                className={`relative text-[15px] leading-relaxed
                 ${msg.role === 'user'
-                                        ? 'bg-accent text-white rounded-br-md shadow-lg shadow-accent/20'
-                                        : 'bg-bg-secondary text-text-primary border border-white/10 rounded-bl-md shadow-md'
+                                        ? 'bg-accent text-white px-5 py-3 rounded-2xl rounded-br-md shadow-lg shadow-accent/20 max-w-[80%]'
+                                        : 'text-text-primary w-full'
                                     }
               `}
                             >
                                 {msg.role === 'model' ? (
-                                    <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1">
+                                    <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-p:text-text-primary prose-headings:text-text-primary prose-strong:text-text-primary prose-li:text-text-primary">
                                         <ReactMarkdown>{msg.text}</ReactMarkdown>
                                     </div>
                                 ) : (
                                     <p className="whitespace-pre-wrap">{msg.text}</p>
                                 )}
                             </div>
-
-                            {/* Avatar for User */}
-                            {msg.role === 'user' && (
-                                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-gray-600 to-gray-700 flex-shrink-0 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                                    Y
-                                </div>
-                            )}
                         </div>
                     ))}
 
                     {loading && (
-                        <div className="flex gap-4">
-                            <div className="w-9 h-9 rounded-lg bg-accent flex-shrink-0 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                                C
-                            </div>
-                            <div className="bg-bg-secondary px-5 py-4 rounded-2xl rounded-bl-md border border-white/10 flex items-center gap-2 shadow-md">
+                        <div className="flex flex-col items-start w-full">
+                            <div className="flex items-center gap-2 mt-2">
                                 <div className="w-2 h-2 bg-accent/60 rounded-full animate-bounce"></div>
                                 <div className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                                 <div className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
@@ -144,7 +128,7 @@ const Chat = ({ syncedFileCount = 0 }) => {
 
             {/* Input Area */}
             <div className="border-t border-white/10 bg-bg-primary/80 backdrop-blur-sm">
-                <div className="max-w-4xl mx-auto p-4 md:p-6">
+                <div className="max-w-3xl mx-auto p-4 md:p-6">
                     <div className="relative">
                         <textarea
                             ref={textareaRef}
